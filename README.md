@@ -27,6 +27,7 @@ For Arch Linux and derivatives: https://aur.archlinux.org/packages/proton-commun
 - https://github.com/the-sane/lug-helper for the awesome zenity-"framework"
 - https://github.com/flubberding/ProtonUpdater for the initial inspiration and groundwork for downloading
 - https://github.com/richardtatum/sc-runner-updater for adding upon flubberdings single-version downloader
+- https://www.protondb.com/ for the permission to base the icon on their logo
 
 
 [//]: # (These are reference links used in the body of this note and get stripped out when the markdown processor does its job. There is no need to format nicely because it shouldn't be seen. Thanks SO - http://stackoverflow.com/questions/4823468/store-comments-in-markdown-syntax)
