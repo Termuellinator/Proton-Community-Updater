@@ -480,6 +480,7 @@ proton_install() {
     rm "$tmp_dir/$proton_file"
 }
 
+
 # List available Proton builds for download
 proton_select_install() {
     # This function expects an element number for the array
@@ -502,6 +503,18 @@ proton_select_install() {
             debug_print exit "Script error:  Unknown api/url format in proton_sources array. Aborting."
             ;;
     esac
+    
+    # Check for GlibC-Version if TKG is selected, as he requires 2.33
+    if [ "$contributor_url" = "https://api.github.com/repos/Frogging-Family/wine-tkg-git/releases" ]; then
+        printf "checking for glibc \n"
+        system_glibc=($(ldd --version | awk '/ldd/{print $NF}'))
+        printf "system glibc-versuib: $system_glibc \n"
+        required_glibc="2.33"
+        if [ "$(bc <<< "$required_glibc>$system_glibc")" == "1" ]; then
+            message warning "Your glibc version is too low, TKG requires v$required_glibc "
+            proton_manage
+        fi
+    fi
 
     # Fetch a list of proton versions from the selected contributor
     # To add new sources, handle them here, in the if statement
@@ -643,6 +656,24 @@ fi
 
 # Set some defaults
 steam_needs_restart="false"
+
+# Credits for this go to https://gist.github.com/lukechilds/a83e1d7127b78fef38c2914c4ececc3c
+get_latest_release() {
+  curl --silent "https://api.github.com/repos/$1/releases/latest" | # Get latest release from GitHub api
+    grep '"tag_name":' |                                            # Get tag line
+    sed -E 's/.*"([^"]+)".*/\1/'                                    # Pluck JSON value
+}
+
+# Check if a new Verison of the script is available
+repo="Termuellinator/Proton-Community-Updater"
+current_version="v1.1"
+latest_version=$(get_latest_release "$repo")
+
+if [ "$latest_version" != "$current_version" ]; then
+    # Print to stdout and also try warning the user through message
+    printf "New version available, check https://github.com/Termuellinator/Proton-Community-Updater/releases \n"
+    message info "New version available, check <a href='https://github.com/Termuellinator/Proton-Community-Updater/releases'>https://github.com/Termuellinator/Proton-Community-Updater/releases</a> \n"
+fi
 
 
 # Loop the main menu until the user selects quit
