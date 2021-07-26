@@ -667,7 +667,7 @@ get_latest_release() {
 
 # Check if a new Verison of the script is available
 repo="Termuellinator/Proton-Community-Updater"
-current_version="v1.1"
+current_version="v1.2"
 latest_version=$(get_latest_release "$repo")
 
 if [ "$latest_version" != "$current_version" ]; then
