@@ -592,10 +592,10 @@ proton_manage() {
         message info "Steam does not appear to be installed."
         return 0
     fi
+
+    # Check if the proton_dir exists and create it if not    
     if [ ! -d "$proton_dir" ]; then
         mkdir -p "$proton_dir"
-#        message info "Proton directory not found.  Unable to continue.\n\n$proton_dir"
-#        return 0
     fi
     
     # The proton management menu will loop until the user cancels
