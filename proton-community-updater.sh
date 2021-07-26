@@ -19,7 +19,7 @@
 ###################### Variables to be changed by user #####################
 # steam proton directory
 # may also be "$HOME/.steam/root/compatibilitytools.d" or "$HOME/.steam/compatibilitytools.d" depending on distro
-proton_dir="$HOME/.steam/steam/compatibilitytools.d/"
+proton_dir="$HOME/.local/share/Steam/compatibilitytools.d/"
 #
 # URLs for downloading Proton builds
 # Elements in this array must be added in quoted pairs of: "description" "url"
@@ -593,8 +593,9 @@ proton_manage() {
         return 0
     fi
     if [ ! -d "$proton_dir" ]; then
-        message info "Proton directory not found.  Unable to continue.\n\n$proton_dir"
-        return 0
+        mkdir -p "$proton_dir"
+#        message info "Proton directory not found.  Unable to continue.\n\n$proton_dir"
+#        return 0
     fi
     
     # The proton management menu will loop until the user cancels
