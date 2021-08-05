@@ -17,10 +17,11 @@
 ############################################################################
 
 ###################### Variables to be changed by user #####################
-# steam proton directory
-# may also be "$HOME/.steam/root/compatibilitytools.d" or "$HOME/.steam/compatibilitytools.d" depending on distro
-proton_dir="$HOME/.local/share/Steam/compatibilitytools.d/"
-#
+# steam default directory
+steam_dir_default="$HOME/.local/share/Steam"
+# ubuntu uses a different directory if steam is installed via repo
+steam_dir_ubuntu="$HOME/.steam/debian-installation"
+
 # URLs for downloading Proton builds
 # Elements in this array must be added in quoted pairs of: "description" "url"
 # The first string in the pair is expected to contain the proton description
@@ -654,6 +655,19 @@ use_zenity=0
 if [ -x "$(command -v zenity)" ]; then
     use_zenity=1
 fi
+
+# check if the default or ubuntu-directory are present
+if [ -d "$steam_dir_default" ]; then
+    proton_dir="$steam_dir_default/compatibilitytools.d/"
+elif [ -d "$steam_dir_ubuntu" ]; then
+    proton_dir="$steam_dir_ubuntu/compatibilitytools.d/"
+else
+    message warning "no Steam-directory found. If Steam is installed into a custom directory, change it at line 21."
+    exit 0
+#    debug_print exit "no Steam-directory found. If Steam is installed into a custom directory, change it at line 21."
+fi
+
+printf "$proton_dir"
 
 # Set some defaults
 steam_needs_restart="false"
