@@ -229,6 +229,8 @@ menu() {
         debug_print exit "Script error: The string 'menu_text_terminal' was not set\nbefore calling the menu function. Aborting."
     elif [ -z "$menu_height" ]; then
         debug_print exit "Script error: The string 'menu_height' was not set\nbefore calling the menu function. Aborting."
+    elif [ -z "$cancel_label" ]; then
+        debug_print exit "Script error: The string 'cancel_label' was not set\nbefore calling the menu function. Aborting."
     fi
     
     # Use Zenity if it is available
@@ -248,7 +250,7 @@ menu() {
         done
 
         # Display the zenity radio button menu
-        choice="$(zenity --list --radiolist --width="480" --height="$menu_height" --text="$menu_text_zenity" --title="Proton Community Updater" --hide-header --window-icon=$pcu_logo --column="" --column="Option" "${zen_options[@]}" 2>/dev/null)"
+        choice="$(zenity --list --radiolist --width="480" --height="$menu_height" --text="$menu_text_zenity" --title="Proton Community Updater" --hide-header --cancel-label "$cancel_label" --window-icon=$pcu_logo --column="" --column="Option" "${zen_options[@]}" 2>/dev/null)"
 
         # Loop through the options array to match the chosen option
         matched="false"
@@ -369,6 +371,9 @@ proton_select_delete() {
     if [ "$menu_height" -gt "400" ]; then
         menu_height="400"
     fi
+    
+    # Set the label for the cancel button
+    cancel_label="Go Back"
     
     # Call the menu function.  It will use the options as configured above
     menu
@@ -521,7 +526,7 @@ proton_select_install() {
     # To add new sources, handle them here, in the if statement
     # just above, and the proton_install function above
     if [ "$proton_url_type" = "github" ]; then
-        proton_versions=($(curl -s "$contributor_url" | awk '/browser_download_url/ {print $2}' | xargs basename -a))
+        proton_versions=($(curl -s "$contributor_url" | awk '/browser_download_url/ {print $2}' | grep -vE "*.sha512sum" | xargs basename -a))
     else
         debug_print exit "Script error:  Unknown api/url format in proton_sources array. Aborting."
     fi
@@ -582,13 +587,25 @@ proton_select_install() {
         menu_height="400"
     fi
     
+    # Set the label for the cancel button
+    cancel_label="Go Back"
+    
     # Call the menu function.  It will use the options as configured above
     menu
 }
 
 # Manage Proton Builds
+#
+# This function expects the following variables to be set:
+#
+# - The string proton_sources is a formatted array containing the URLs
+#   of items to download. It should be pointed to the appropriate
+#   array set at the top of the script using indirect expansion.
+#   See proton_sources at the top and proton_manage() below for examples.
+# - The string proton_dir should contain the location the downloaded item
+#   will be installed to.
 proton_manage() {
-    # Check if Lutris is installed
+    # Check if Steam is installed
     if [ ! -x "$(command -v steam)" ]; then
         message info "Steam does not appear to be installed."
         return 0
@@ -630,6 +647,9 @@ proton_manage() {
         # Calculate the total height the menu should be
         menu_height="$(($menu_option_height * ${#menu_options[@]} + $menu_text_height))"
         
+        # Set the label for the cancel button
+       cancel_label="Go Back"
+        
         # Call the menu function.  It will use the options as configured above
         menu
     done
@@ -640,6 +660,12 @@ proton_manage() {
 
 #-------------------------- end Proton builds functions -----------------------------#
 
+# Credits for this go to https://gist.github.com/lukechilds/a83e1d7127b78fef38c2914c4ececc3c
+get_latest_release() {
+  curl --silent "https://api.github.com/repos/$1/releases/latest" | # Get latest release from GitHub api
+    grep '"tag_name":' |                                            # Get tag line
+    sed -E 's/.*"([^"]+)".*/\1/'                                    # Pluck JSON value
+}
 
 quit() {
     exit 0
@@ -667,21 +693,12 @@ else
 #    debug_print exit "no Steam-directory found. If Steam is installed into a custom directory, change it at line 21."
 fi
 
-printf "$proton_dir"
-
 # Set some defaults
 steam_needs_restart="false"
 
-# Credits for this go to https://gist.github.com/lukechilds/a83e1d7127b78fef38c2914c4ececc3c
-get_latest_release() {
-  curl --silent "https://api.github.com/repos/$1/releases/latest" | # Get latest release from GitHub api
-    grep '"tag_name":' |                                            # Get tag line
-    sed -E 's/.*"([^"]+)".*/\1/'                                    # Pluck JSON value
-}
-
 # Check if a new Verison of the script is available
 repo="Termuellinator/Proton-Community-Updater"
-current_version="v1.2"
+current_version="v1.2.1"
 latest_version=$(get_latest_release "$repo")
 
 if [ "$latest_version" != "$current_version" ]; then
@@ -710,6 +727,9 @@ while true; do
 
     # Calculate the total height the menu should be
     menu_height="$(($menu_option_height * ${#menu_options[@]} + $menu_text_height))"
+    
+    # Set the label for the cancel button
+    cancel_label="Quit"
     
     # Call the menu function.  It will use the options as configured above
     menu
