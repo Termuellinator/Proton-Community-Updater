@@ -21,6 +21,8 @@
 steam_dir_default="$HOME/.local/share/Steam"
 # ubuntu uses a different directory if steam is installed via repo
 steam_dir_ubuntu="$HOME/.steam/debian-installation"
+# steam flatpak is also a thing
+steam_dir_flatpak="$HOME/.var/app/com.valvesoftware.Steam/.local/share/Steam"
 
 # URLs for downloading Proton builds
 # Elements in this array must be added in quoted pairs of: "description" "url"
@@ -311,13 +313,10 @@ menu_loop_done() {
 
 #------------------------- begin Proton Builds functions ----------------------------#
 
-# Restart lutris
+# Inform about needed restart
 steam_restart() {
     if [ "$steam_needs_restart" = "true" ] && [ "$(pgrep steam)" ]; then
-        if message question "Steam must be restarted to detect changes in installed Proton versions.\nWould you like this Helper to restart it for you?"; then
-            debug_print continue "Restarting Steam..."
-            pkill -SIGTERM steam && nohup steam </dev/null &>/dev/null &
-        fi
+       message info  "Steam must be restarted to detect changes in installed Proton versions."
     fi
     steam_needs_restart="false"
 }
@@ -638,24 +637,37 @@ proton_manage() {
             # Set the corresponding functions to be called for each of the options
             menu_actions+=("proton_select_install $i")
         done
-        
-        # Complete the menu by adding options to remove an installed proton build
-        # or go back to the previous menu
-        menu_options+=("$delete" "$back")
-        menu_actions+=("proton_select_delete" "menu_loop_done")
-
-        # Calculate the total height the menu should be
-        menu_height="$(($menu_option_height * ${#menu_options[@]} + $menu_text_height))"
-        
+   
         # Set the label for the cancel button
-       cancel_label="Go Back"
+        if [ "$steam_detected" = "true" ] && [ "$flatpak_detected" = "true" ]; then
+            cancel_label="Go Back"
+            # Complete the menu by adding options to remove an installed proton build
+            # or go back to the previous menu
+            menu_options+=("$delete" "$back")
+            menu_actions+=("proton_select_delete" "menu_loop_done")
+        else
+            # if there is only steam OR flatpak installed, there is no main menu
+            cancel_label="Quit"
+            menu_options+=("$delete" "$quit_msg")
+            menu_actions+=("proton_select_delete" "quit")
+        fi
+        
+         # Calculate the total height the menu should be
+        menu_height="$(($menu_option_height * ${#menu_options[@]} + $menu_text_height))"
         
         # Call the menu function.  It will use the options as configured above
         menu
     done
-    
-    # Check if steam needs to be restarted after making changes
-    steam_restart
+}
+
+manage_local() {
+proton_dir="$local_dir"
+proton_manage
+}
+
+manage_flatpak() {
+proton_dir="$flatpak_dir"
+proton_manage
 }
 
 #-------------------------- end Proton builds functions -----------------------------#
@@ -668,6 +680,7 @@ get_latest_release() {
 }
 
 quit() {
+    steam_restart # display message that steam needs to be restarted if new builds have been installed and steam ins running
     exit 0
 }
 
@@ -684,13 +697,24 @@ fi
 
 # check if the default or ubuntu-directory are present
 if [ -d "$steam_dir_default" ]; then
-    proton_dir="$steam_dir_default/compatibilitytools.d/"
+    local_dir="$steam_dir_default/compatibilitytools.d/"
+    steam_detected="true"
 elif [ -d "$steam_dir_ubuntu" ]; then
-    proton_dir="$steam_dir_ubuntu/compatibilitytools.d/"
+    local_dir="$steam_dir_ubuntu/compatibilitytools.d/"
+    steam_detected="true"
+elif [ -d "$steam_dir_flatpak" ]; then      # if there is no normal steam dir, there can still be flatpak
+    steam_detected="false"
 else
     message warning "no Steam-directory found. If Steam is installed into a custom directory, change it at line 21."
     exit 0
-#    debug_print exit "no Steam-directory found. If Steam is installed into a custom directory, change it at line 21."
+fi
+
+# check if flatpaked steam is installed 
+if [ -d "$steam_dir_flatpak" ]; then
+    flatpak_dir="$steam_dir_flatpak/compatibilitytools.d/"
+    flatpak_detected="true"
+else
+    flatpak_detected="false"
 fi
 
 # Set some defaults
@@ -698,7 +722,7 @@ steam_needs_restart="false"
 
 # Check if a new Verison of the script is available
 repo="Termuellinator/Proton-Community-Updater"
-current_version="v1.2.1"
+current_version="v1.3"
 latest_version=$(get_latest_release "$repo")
 
 if [ "$latest_version" != "$current_version" ]; then
@@ -716,14 +740,14 @@ while true; do
     menu_text_height="140"
 
     # Configure the menu options
-    proton_msg="Download or delete custom Proton builds"
-    restart_msg="Restart Steam"
+    local_msg="Download or delete custom Proton builds"
+    flatpak_msg="Download or delete custom Proton builds in the flatpak installation"
     quit_msg="Quit"
     
     # Set the options to be displayed in the menu
-    menu_options=("$proton_msg" "$restart_msg" "$quit_msg")
+    menu_options=("$local_msg" "$flatpak_msg" "$quit_msg")
     # Set the corresponding functions to be called for each of the options
-    menu_actions=("proton_manage" "steam-restart" "quit")
+    menu_actions=("manage_local" "manage_flatpak" "quit")
 
     # Calculate the total height the menu should be
     menu_height="$(($menu_option_height * ${#menu_options[@]} + $menu_text_height))"
@@ -731,6 +755,12 @@ while true; do
     # Set the label for the cancel button
     cancel_label="Quit"
     
-    # Call the menu function.  It will use the options as configured above
-    menu
+    # show a selection menu if both local and flatpaked steam are installed, otherwise call manage directly
+    if [ "$steam_detected" = "true" ] && [ "$flatpak_detected" = "true" ]; then 
+        menu
+    elif [ "$steam_detected" = "true" ]; then
+        manage_local
+    elif [ "$flatpak_detected" = "true" ]; then
+        manage_flatpak
+    fi
 done
